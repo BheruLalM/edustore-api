@@ -1,0 +1,51 @@
+# ======================
+# Python / FastAPI
+# ======================
+__pycache__/
+*.py[cod]
+*.pyd
+
+# virtual environments
+venv/
+.venv/
+env/
+.env.venv
+
+# environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# ======================
+# FastAPI / Uvicorn
+# ======================
+*.log
+uvicorn.log
+
+# ======================
+# Database
+# ======================
+*.sqlite3
+*.db
+
+# ======================
+# Migrations / Cache
+# ======================
+.alembic/
+alembic/versions/__pycache__/
+
+# ======================
+# Testing
+# ======================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ======================
+# OS / Editor
+# ======================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
