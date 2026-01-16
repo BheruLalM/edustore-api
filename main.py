@@ -57,6 +57,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
 # 1. CORS Middleware (Outermost - ensures headers on ALL responses)
 origins = [
+    "https://edustore-omega.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
