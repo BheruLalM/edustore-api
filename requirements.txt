@@ -27,6 +27,7 @@ fastapi-mail==1.4.1
 
 # Caching
 redis==5.0.8
+upstash-redis==1.4.0
 
 # Storage
 supabase==2.10.0

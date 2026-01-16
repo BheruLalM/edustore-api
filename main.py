@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+import traceback
+import logging
 
 from api.api_router import api_router
 from core.exceptions import (
@@ -21,41 +23,53 @@ from core.exceptions import (
     InvalidAvatarKey,
     AvatarUploadExpired,
     AvatarNotFound,
+    ERROR_STATUS_MAP,
 )
 
 app = FastAPI(title="EduStore", description="Here you have all friends together")
+
+# Router Inclusion
 app.include_router(api_router)
 
-ERROR_STATUS_MAP = {
-    UserNotFound: 404,
-    CannotFollowYourself: 400,
-    NotFollowing: 404,
-    OTPCooldownActive: 429,
-    DocumentNotFound: 404,
-    DocumentAccessDenied: 403,
-    DownloadUrlGenerationFailed: 503,
-    DocumentOwnershipError: 400,
-    InvalidAvatarContentType: 400,
-    InvalidAvatarKey: 400,
-    AvatarUploadExpired: 400,
-    AvatarNotFound: 404,
-}
+# ------------------------------------------------------------------
+# MIDDLEWARE STACK (Added in reverse order of execution)
+# ------------------------------------------------------------------
+
+# 3. Global Exception Handler (Outer middle layer)
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        logging.error(f"Unhandled exception during {request.method} {request.url.path}: {exc}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal Server Error",
+                "error_code": "unhandled_exception",
+                "message": str(exc)
+            }
+        )
+
+# 2. Add GZip compression for responses > 1KB
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
+
+# 1. CORS Middleware (Outermost - ensures headers on ALL responses)
 origins = [
-    "http://localhost:5173",  # frontend
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,           # frontend URL allow karo
-    allow_credentials=True,          # cookies allow
-    allow_methods=["*"],             # GET, POST, OPTIONS etc.
-    allow_headers=["*"],             # Content-Type, Authorization etc.
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Add GZip compression for responses > 1KB
-app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
-
-# Request timing middleware for performance monitoring
+# 0. Request timing middleware for performance monitoring
 class TimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = time.time()
@@ -70,6 +84,8 @@ class TimingMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(TimingMiddleware)
+
+# Outermost middleware is TimingMiddleware (added last)
 
 @app.exception_handler(DomainError)
 async def domain_exception_handler(request: Request, exc: DomainError):

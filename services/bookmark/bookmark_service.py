@@ -58,6 +58,10 @@ class BookmarkService:
             )
             db.add(bookmark)
             db.commit()
+            from services.cache.cache_manager import CacheManager
+            CacheManager.invalidate_document(document_id)
+            CacheManager.invalidate_user_docs(current_user.id)
+            CacheManager.invalidate_user_bookmarks(current_user.id)
             return {
                 "document_id": document.id,
                 "is_bookmarked": True,
@@ -70,6 +74,10 @@ class BookmarkService:
                 Bookmark.document_id == document.id,
             ).delete()
             db.commit()
+            from services.cache.cache_manager import CacheManager
+            CacheManager.invalidate_document(document_id)
+            CacheManager.invalidate_user_docs(current_user.id)
+            CacheManager.invalidate_user_bookmarks(current_user.id)
             return {
                 "document_id": document.id,
                 "is_bookmarked": False,
@@ -121,55 +129,38 @@ class BookmarkService:
         limit: int = 20,
         offset: int = 0,
     ):
-        """Get user's bookmarked documents with optimized queries (no N+1)"""
+        """Get user's bookmarked documents with optimized queries and caching"""
         import time
         from sqlalchemy import func, case
         from models.student import Student
         from models.likes import Like
         from models.comments import Comment
-        from services.storage.factory import StorageFactory
+        from services.storage.url_cache import StorageURLCache
         from services.cache.redis_service import cache
         
         start_time = time.time()
         limit = min(limit, 50)
 
-        # ------------------------------------------------------------------
-        # OPTIMIZED QUERY (Eliminates N+1)
-        # ------------------------------------------------------------------
-        
-        # 1. Subquery for Like Count
-        like_count_sq = (
-            db.query(func.count(Like.id))
-            .filter(Like.document_id == Document.id)
-            .correlate(Document)
-            .scalar_subquery()
-            .label("like_count")
-        )
+        # 1. Try CACHE
+        cache_key = f"user:bookmarks:{user_id}:p{offset}:l{limit}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            print(f"⚡ Bookmarks Cache HIT: {cache_key}")
+            return cached_data
 
-        # 2. Subquery for Comment Count
-        comment_count_sq = (
-            db.query(func.count(Comment.id))
-            .filter(Comment.document_id == Document.id)
-            .correlate(Document)
-            .scalar_subquery()
-            .label("comment_count")
-        )
+        # ------------------------------------------------------------------
+        # OPTIMIZED QUERY
+        # ------------------------------------------------------------------
+        like_sq = db.query(func.count(Like.id)).filter(Like.document_id == Document.id).correlate(Document).scalar_subquery()
+        comm_sq = db.query(func.count(Comment.id)).filter(Comment.document_id == Document.id).correlate(Document).scalar_subquery()
 
-        # 3. Subquery for Is Liked (by current user)
-        is_liked_sq = (
-            db.query(Like.id)
-            .filter(
-                Like.document_id == Document.id,
-                Like.user_id == user_id
-            )
-            .correlate(Document)
-            .exists()
-        )
+        # Is Liked (by self)
+        is_liked_sq = db.query(Like.id).filter(Like.document_id == Document.id, Like.user_id == user_id).correlate(Document).exists()
         is_liked_col = case((is_liked_sq, True), else_=False).label("is_liked")
 
         # Main Query execution
         query = (
-            db.query(Document, User, Student, Bookmark, like_count_sq, comment_count_sq, is_liked_col)
+            db.query(Document, User, Student, Bookmark, like_sq, comm_sq, is_liked_col)
             .join(Bookmark, Bookmark.document_id == Document.id)
             .join(User, Document.user_id == User.id)
             .outerjoin(Student, Student.user_id == User.id)
@@ -186,32 +177,10 @@ class BookmarkService:
         # ------------------------------------------------------------------
         # RESULT FORMATTING
         # ------------------------------------------------------------------
-        
         items = []
 
-        for doc, owner, student, bookmark, like_count, comment_count, is_liked in rows:
-            # Get cached avatar URL
-            owner_avatar = None
-            if student and student.profile_url:
-                if student.profile_url.startswith("http"):
-                    owner_avatar = student.profile_url
-                else:
-                    # Try cache first
-                    cache_key = f"avatar_url:{student.profile_url}"
-                    cached_url = cache.get(cache_key)
-                    if cached_url:
-                        owner_avatar = cached_url
-                    else:
-                        try:
-                            storage = StorageFactory.get_storage()
-                            owner_avatar = storage.generate_download_url(
-                                object_key=student.profile_url,
-                                expires_in=31536000,  # 1 year
-                            )
-                            # Cache for 1 hour
-                            cache.set(cache_key, owner_avatar, ttl=3600)
-                        except Exception:
-                            pass
+        for doc, owner, student, bookmark, like_cnt, comm_cnt, liked in rows:
+            owner_avatar = StorageURLCache.get_avatar_url(student.profile_url if student else None)
 
             items.append({
                 "id": doc.id,
@@ -222,21 +191,23 @@ class BookmarkService:
                 "content_type": doc.content_type,
                 "created_at": doc.created_at,
                 "owner_id": doc.user_id,
-                "owner_name": student.name if student else None,
+                "owner_name": student.name if student else owner.email.split("@")[0],
                 "owner_email": owner.email,
                 "owner_avatar": owner_avatar,
                 "visibility": doc.visibility,
                 "bookmarked_at": bookmark.created_at,
-                "like_count": like_count or 0,
-                "is_liked": bool(is_liked),
-                "comment_count": comment_count or 0,
-                "is_bookmarked": True,  # Always true for bookmarks list
+                "like_count": like_cnt or 0,
+                "is_liked": bool(liked),
+                "comment_count": comm_cnt or 0,
+                "is_bookmarked": True,
             })
 
-        elapsed = time.time() - start_time
-        print(f"⏱️  GET /documents/bookmarks/me completed in {elapsed:.3f}s (limit={limit}, offset={offset}, total={total})")
+        result = {"items": items, "total": total}
 
-        return {
-            "items": items,
-            "total": total,
-        }
+        # Cache for 2 minutes
+        cache.set(cache_key, result, ttl=120)
+
+        elapsed = time.time() - start_time
+        print(f"⏱️  GET /documents/bookmarks/me | db={elapsed:.3f}s | cache=MISS")
+
+        return result

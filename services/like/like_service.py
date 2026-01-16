@@ -36,6 +36,8 @@ class LikeService:
             )
             db.add(like)
             db.commit()
+            from services.cache.cache_manager import CacheManager
+            CacheManager.invalidate_document(document_id)
             return True  # Successfully liked
         except IntegrityError:
             # Like already exists, remove it (unlike)
@@ -45,6 +47,8 @@ class LikeService:
                 Like.document_id == document_id,
             ).delete()
             db.commit()
+            from services.cache.cache_manager import CacheManager
+            CacheManager.invalidate_document(document_id)
             return False  # Successfully unliked
 
     @staticmethod

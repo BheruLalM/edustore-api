@@ -55,28 +55,34 @@ class CloudinaryStorage(Storage):
         object_key: str,
         expires_in: int = 300,
     ) -> str:
-        """
-        Generate Cloudinary download URL
-        Note: Cloudinary URLs don't expire by default (public URLs)
-        """
+        """Generate Cloudinary download URL - Fixed Pathing"""
         self._validate_object_key(object_key)
         
         try:
-            # Build Cloudinary URL using CloudinaryImage
-            # Format: https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}
-            # Cloudinary automatically determines resource type from the file
+            import os
+            # Use the exact same public_id logic as upload
+            # Cloudinary public ID for matching MUST include the edustore prefix
             public_id = f"edustore/{object_key}"
             
-            # Use CloudinaryImage for proper URL construction
-            from cloudinary import CloudinaryImage
-            url = CloudinaryImage(public_id).build_url(
+            # Determine resource_type
+            _, ext = os.path.splitext(object_key)
+            ext = ext.lower()
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            resource_type = 'image' if ext in image_extensions else 'raw'
+            
+            # For images, Cloudinary usually expects the ID without extension
+            # For raw files, it requires it.
+            if resource_type == 'image':
+                public_id = public_id.rsplit('.', 1)[0]
+            
+            from cloudinary.utils import cloudinary_url
+            url, _ = cloudinary_url(
+                public_id,
                 secure=True,
-                type='upload',
-                version=False  # Don't include version in URL
+                resource_type=resource_type
             )
             
             print(f"🔗 Generated URL: {url}")
-            
             return url
             
         except Exception as e:
@@ -87,9 +93,20 @@ class CloudinaryStorage(Storage):
         self._validate_object_key(object_key)
         
         try:
+            import os
+            public_id = f"edustore/{object_key}"
+            _, ext = os.path.splitext(object_key)
+            ext = ext.lower()
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            resource_type = 'image' if ext in image_extensions else 'raw'
+            
+            if resource_type == 'image':
+                public_id = public_id.rsplit('.', 1)[0]
+            
             cloudinary.uploader.destroy(
-                f"edustore/{object_key}",
-                invalidate=True  # Invalidate CDN cache
+                public_id,
+                resource_type=resource_type,
+                invalidate=True
             )
         except Exception as e:
             raise StorageOperationFailed(f"Failed to delete object: {str(e)}") from e
@@ -100,26 +117,39 @@ class CloudinaryStorage(Storage):
         object_key: str,
         file_content: bytes,
         content_type: str,
-    ) -> None:
-        """Upload file directly to Cloudinary"""
+    ) -> str:
+        """Upload file directly to Cloudinary and return secure URL - Simplified Pathing"""
         self._validate_object_key(object_key)
         
         try:
-            # Remove file extension from object_key since Cloudinary adds it automatically
             import os
-            object_key_without_ext = os.path.splitext(object_key)[0]
-            public_id = f"edustore/{object_key_without_ext}"
+            # Standardize: public_id includes the 'edustore/' prefix
+            # This allows generate_download_url to be perfectly consistent.
+            public_id = f"edustore/{object_key}"
             
-            print(f"📤 Uploading to Cloudinary: {public_id}")
+            _, ext = os.path.splitext(object_key)
+            ext = ext.lower()
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            resource_type = 'image' if ext in image_extensions else 'raw'
+            
+            # For images, we strip the extension from public_id to allow Cloudinary 
+            # to serve it with different formats (transformations).
+            # For raw, we MUST keep it.
+            if resource_type == 'image':
+                public_id = public_id.rsplit('.', 1)[0]
+                
+            print(f"📤 Uploading: {public_id} (Type: {resource_type})")
             
             result = cloudinary.uploader.upload(
                 file_content,
                 public_id=public_id,
-                resource_type='auto',  # Auto-detect image/video/raw
-                overwrite=True  # Allow overwriting
+                resource_type=resource_type,
+                overwrite=True
             )
             
-            print(f"✅ Upload successful! URL: {result.get('secure_url')}")
+            secure_url = result.get('secure_url')
+            print(f"✅ Upload successful! URL: {secure_url}")
+            return secure_url
             
         except Exception as e:
             print(f"❌ Upload failed: {str(e)}")

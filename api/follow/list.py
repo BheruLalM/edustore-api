@@ -20,11 +20,20 @@ def my_following(
     current_user: User = Depends(get_current_user),
 ):
     import time
+    from services.cache.redis_service import cache
     start_time = time.time()
     
-    limit = min(limit, 50) # Enforce max limit
+    limit = min(limit, 50)
 
-    # Optimize query to select only needed fields
+    # 1. Try CACHE
+    cache_key = f"user:following:{id}:p{offset}:l{limit}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        elapsed = time.time() - start_time
+        print(f"⚡ Following Cache HIT: {cache_key} ({elapsed:.3f}s)")
+        return cached_data
+
+    # 2. DB Query
     follows = (
         db.query(
             Follow.created_at,
@@ -42,14 +51,11 @@ def my_following(
         .all()
     )
 
-    # ✅ OPTIMIZED: Use cached URL helper
     from services.storage.url_cache import StorageURLCache
     
     result = []
     for created_at, user_id, email, name, profile_url_key in follows:
-        # ✅ Cached avatar URL lookup (no storage API call if cached)
         profile_url = StorageURLCache.get_avatar_url(profile_url_key)
-
         result.append({
             "user_id": user_id,
             "email": email,
@@ -58,8 +64,11 @@ def my_following(
             "followed_at": created_at,
         })
 
+    # 3. Cache for 60s
+    cache.set(cache_key, result, ttl=60)
+
     elapsed = time.time() - start_time
-    print(f"⏱️  GET /users/{id}/following completed in {elapsed:.3f}s (limit={limit}, offset={offset})")
+    print(f"⏱️  GET /users/{id}/following completed in {elapsed:.3f}s (limit={limit}, offset={offset}) [MISS]")
 
     return result
 
@@ -73,10 +82,20 @@ def my_followers(
     current_user: User = Depends(get_current_user),
 ):
     import time
+    from services.cache.redis_service import cache
     start_time = time.time()
 
     limit = min(limit, 50)
 
+    # 1. Try CACHE
+    cache_key = f"user:followers:{id}:p{offset}:l{limit}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        elapsed = time.time() - start_time
+        print(f"⚡ Followers Cache HIT: {cache_key} ({elapsed:.3f}s)")
+        return cached_data
+
+    # 2. DB Query
     follows = (
         db.query(
             Follow.created_at,
@@ -94,14 +113,11 @@ def my_followers(
         .all()
     )
 
-    # ✅ OPTIMIZED: Use cached URL helper
     from services.storage.url_cache import StorageURLCache
     
     result = []
     for created_at, user_id, email, name, profile_url_key in follows:
-        # ✅ Cached avatar URL lookup (no storage API call if cached)
         profile_url = StorageURLCache.get_avatar_url(profile_url_key)
-
         result.append({
             "user_id": user_id,
             "email": email,
@@ -110,7 +126,10 @@ def my_followers(
             "followed_at": created_at,
         })
 
+    # 3. Cache for 60s
+    cache.set(cache_key, result, ttl=60)
+
     elapsed = time.time() - start_time
-    print(f"⏱️  GET /users/{id}/followers completed in {elapsed:.3f}s (limit={limit}, offset={offset})")
+    print(f"⏱️  GET /users/{id}/followers completed in {elapsed:.3f}s (limit={limit}, offset={offset}) [MISS]")
 
     return result

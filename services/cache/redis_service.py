@@ -1,10 +1,12 @@
-import redis
+from upstash_redis import Redis
 from typing import Any, Optional
 import json
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from core.config import redis_setting
 
 class RedisService:
     _instance = None
@@ -20,19 +22,19 @@ class RedisService:
         if self._client is None and not self._connection_attempted:
             self._connection_attempted = True
             try:
-                self._client = redis.Redis(
-                    host=os.getenv('REDIS_HOST', 'localhost'),
-                    port=int(os.getenv('REDIS_PORT', 6379)),
-                    db=int(os.getenv('REDIS_DB', 0)),
-                    decode_responses=True,
-                    socket_connect_timeout=2,
-                    socket_timeout=2,
-                )
-                # Test connection
-                self._client.ping()
-                print("✅ Redis connected - caching enabled")
-            except:
-                # Silently disable caching if Redis is not available
+                url = redis_setting.UPSTASH_REDIS_REST_URL
+                token = redis_setting.UPSTASH_REDIS_REST_TOKEN
+                
+                if url and token:
+                    self._client = Redis(url=url, token=token)
+                    # Test connection
+                    self._client.ping()
+                    print("✅ Upstash Redis connected - caching enabled")
+                else:
+                    print("⚠️  Upstash Redis credentials missing - caching disabled")
+                    self._client = None
+            except Exception as e:
+                print(f"❌ Upstash Redis connection error: {e}")
                 self._client = None
 
     def get(self, key: str) -> Optional[Any]:

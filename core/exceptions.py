@@ -274,3 +274,30 @@ class BookmarkNotFound(BookmarkError):
     default_message = "Bookmark not found"
     error_code = "BOOKMARK.NOT_FOUND"
 
+
+# =========================
+# Error Status Map
+# =========================
+
+ERROR_STATUS_MAP = {
+    OTPCooldownActive: 429,
+    OTPInvalid: 400,
+    OTPExpired: 400,
+    InvalidCredentials: 401,
+    UnauthorizedAccess: 401,
+    UserInactive: 403,
+    CannotFollowYourself: 400,
+    UserNotFound: 404,
+    NotFollowing: 400,
+    AlreadyFollowing: 400,
+    DocumentNotFound: 404,
+    DocumentAccessDenied: 403,
+    DownloadUrlGenerationFailed: 500,
+    DocumentOwnershipError: 403,
+    DocumentDeleted: 404,
+    InvalidAvatarContentType: 400,
+    InvalidAvatarKey: 400,
+    AvatarUploadExpired: 404,
+    AvatarNotFound: 404,
+}
+

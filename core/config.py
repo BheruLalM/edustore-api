@@ -29,9 +29,8 @@ class ServiceSettings(AppSettings):
 
 
 class RedisSetting(AppSettings):
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_DB: int
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
 
 
 class StorageSetting(AppSettings):
@@ -41,6 +40,7 @@ class StorageSetting(AppSettings):
     CLOUDINARY_API_SECRET: str
     
     STORAGE_PROVIDER: str = "cloudinary"
+    DEFAULT_AVATAR_URL: str = "https://res.cloudinary.com/dly8p9v99/image/upload/v1736616449/edustore/avatars/default-avatar_v0r4j8.png"
 
 
 DatabaseSetting = Database_Setting()

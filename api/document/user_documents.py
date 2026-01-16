@@ -20,71 +20,66 @@ def get_user_public_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_optional),
 ):
-    """Get all public documents uploaded by a specific user - OPTIMIZED with pagination"""
+    """Get all public documents uploaded by a specific user - OPTIMIZED with Caching"""
     import time
-    start_time = time.time()
-    
     from models.student import Student
     from models.likes import Like
-    from services.storage.factory import StorageFactory
-    from sqlalchemy import func, case
+    from models.bookmark import Bookmark
+    from models.comments import Comment
+    from sqlalchemy import func, case, literal
+    from services.cache.redis_service import cache
+    from services.storage.url_cache import StorageURLCache
 
-    # Enforce max limit to prevent abuse
+    start_time = time.time()
     limit = min(limit, 50)
 
-    # Get current user ID for personalized checks
+    # 1. Try CACHE
     current_user_id = current_user.id if current_user else None
+    cache_key = f"user:docs:{user_id}:p{offset}:l{limit}:u{current_user_id or 'anon'}"
+    
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        print(f"⚡ User Docs Cache HIT: {cache_key}")
+        return cached_data
 
-    # OPTIMIZED: Single query with JOINs and aggregations
-    # This replaces 80+ queries (4 per document) with 1 query
-    query = (
-        db.query(
-            Document,
-            User,
-            Student,
-            func.count(func.distinct(Like.id)).label('like_count'),
-            func.count(func.distinct(Comment.id)).label('comment_count'),
-            func.max(
-                case(
-                    (Like.user_id == current_user_id, 1),
-                    else_=0
-                )
-            ).label('is_liked'),
-            func.max(
-                case(
-                    (Bookmark.user_id == current_user_id, 1),
-                    else_=0
-                )
-            ).label('is_bookmarked')
-        )
+    # ------------------------------------------------------------------
+    # OPTIMIZED QUERY
+    # ------------------------------------------------------------------
+    like_sq = db.query(func.count(Like.id)).filter(Like.document_id == Document.id).correlate(Document).scalar_subquery()
+    comm_sq = db.query(func.count(Comment.id)).filter(Comment.document_id == Document.id).correlate(Document).scalar_subquery()
+
+    is_liked = literal(False).label("is_liked")
+    is_bookmarked = literal(False).label("is_bookmarked")
+
+    if current_user:
+        liked_exists = db.query(Like.id).filter(Like.document_id == Document.id, Like.user_id == current_user_id).correlate(Document).exists()
+        is_liked = case((liked_exists, True), else_=False).label("is_liked")
+        
+        bookmarked_exists = db.query(Bookmark.id).filter(Bookmark.document_id == Document.id, Bookmark.user_id == current_user_id).correlate(Document).exists()
+        is_bookmarked = case((bookmarked_exists, True), else_=False).label("is_bookmarked")
+
+    results = (
+        db.query(Document, User, Student, like_sq, comm_sq, is_liked, is_bookmarked)
         .join(User, Document.user_id == User.id)
         .outerjoin(Student, Student.user_id == User.id)
-        .outerjoin(Like, Like.document_id == Document.id)
-        .outerjoin(Comment, Comment.document_id == Document.id)
-        .outerjoin(Bookmark, Bookmark.document_id == Document.id)
         .filter(
             Document.user_id == user_id,
             Document.visibility == "public",
             Document.is_deleted.is_(False),
         )
-        .group_by(Document.id, User.id, Student.id)
         .order_by(Document.created_at.desc())
-        .limit(limit)
         .offset(offset)
+        .limit(limit)
+        .all()
     )
 
-    results = query.all()
-
-    # ✅ OPTIMIZED: Use cached URL helper instead of generating in loop
-    from services.storage.url_cache import StorageURLCache
-    
+    # ------------------------------------------------------------------
+    # RESULT FORMATTING
+    # ------------------------------------------------------------------
     response_data = []
 
-    for doc, owner, student, like_count, comment_count, is_liked, is_bookmarked in results:
-        # ✅ Cached avatar URL lookup (no storage API call if cached)
-        owner_avatar = StorageURLCache.get_avatar_url(
-            student.profile_url if student else None
-        )
+    for doc, owner, student, like_cnt, comm_cnt, liked, bookmarked in results:
+        owner_avatar = StorageURLCache.get_avatar_url(student.profile_url if student else None)
 
         response_data.append({
             "id": doc.id,
@@ -93,18 +88,21 @@ def get_user_public_documents(
             "file_size": doc.file_size,
             "created_at": doc.created_at,
             "owner_id": doc.user_id,
-            "owner_name": student.name if student else None,
+            "owner_name": student.name if student else owner.email.split("@")[0],
             "owner_email": owner.email,
             "owner_avatar": owner_avatar,
             "content": doc.content,
             "content_type": doc.content_type,
-            "like_count": like_count or 0,
-            "is_liked": bool(is_liked),
-            "comment_count": comment_count or 0,
-            "is_bookmarked": bool(is_bookmarked),
+            "like_count": like_cnt or 0,
+            "is_liked": bool(liked),
+            "comment_count": comm_cnt or 0,
+            "is_bookmarked": bool(bookmarked),
         })
 
+    # Cache for 2 minutes
+    cache.set(cache_key, response_data, ttl=120)
+
     elapsed = time.time() - start_time
-    print(f"⏱️  GET /users/{user_id}/documents completed in {elapsed:.3f}s ({len(response_data)} documents, limit={limit}, offset={offset})")
+    print(f"⏱️  GET /users/{user_id}/documents | db={elapsed:.3f}s | cache=MISS")
     
     return response_data
