@@ -5,7 +5,7 @@ starlette==0.38.6
 
 # Database
 sqlalchemy==2.0.35
-psycopg2-binary==2.9.9
+psycopg2-binary
 alembic==1.17.2
 
 # Configuration & Environment
