@@ -27,9 +27,14 @@ class CreatePostService:
             visibility=visibility,
         )
 
+        from services.cache.cache_manager import CacheManager
         db.add(post)
         db.commit()
         db.refresh(post)
+
+        # Invalidate caches
+        CacheManager.invalidate_user_docs(user.id)
+        CacheManager.invalidate_feed()
 
         return post
 

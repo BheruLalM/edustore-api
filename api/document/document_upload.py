@@ -175,10 +175,15 @@ def commit_document(
     content=data.content, 
 )
 
+    from services.cache.cache_manager import CacheManager
     try:
         db.add(document)
         db.commit()
         db.refresh(document)
+        
+        # Invalidate caches
+        CacheManager.invalidate_user_docs(current_user.id)
+        CacheManager.invalidate_feed()
     except IntegrityError:
         db.rollback()
         raise StorageOperationFailed("Document already committed")
@@ -211,6 +216,10 @@ def delete_document(
     # soft delete
     document.is_deleted = True
     db.commit()
+
+    from services.cache.cache_manager import CacheManager
+    CacheManager.invalidate_document(document_id)
+    CacheManager.invalidate_user_docs(current_user.id)
 
     # optional: async/background cleanup
     try:

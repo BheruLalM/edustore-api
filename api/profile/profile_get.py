@@ -1,49 +1,52 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from models.student import Student
 from db.deps import get_db
 from dependencies.get_current_user import get_current_user
-from api.profile.schema import profile_update
 from models.user import User
 from api.profile.schema import ProfileResponse
-from services.storage.factory import StorageFactory
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
-
-
 
 @router.get("/me", response_model=ProfileResponse)
 def get_my_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Get current user's profile - Optimized with caching"""
+    from services.cache.redis_service import cache
+    from services.storage.url_cache import StorageURLCache
     from models.follow import Follow
+    from sqlalchemy import func, case
     
+    # 1. Try Cache
+    cache_key = f"user_profile_static:{current_user.id}"
+    cached_profile = cache.get(cache_key)
+    if cached_profile:
+        # Ensure is_following is provided for schema if needed
+        cached_profile["is_following"] = False
+        return ProfileResponse(**cached_profile)
+
+    # 2. Get student info
     student = (
         db.query(Student)
         .filter(Student.user_id == current_user.id)
         .first()
     )
 
-    # Get follower and following counts
-    followers_count = db.query(Follow).filter(Follow.following_id == current_user.id).count()
-    following_count = db.query(Follow).filter(Follow.follower_id == current_user.id).count()
+    # 3. Optimized Count Query (Single trip)
+    counts = db.query(
+        func.sum(case((Follow.following_id == current_user.id, 1), else_=0)).label('followers'),
+        func.sum(case((Follow.follower_id == current_user.id, 1), else_=0)).label('following')
+    ).filter(
+        (Follow.following_id == current_user.id) | (Follow.follower_id == current_user.id)
+    ).first()
+    
+    followers_count = int(counts.followers or 0)
+    following_count = int(counts.following or 0)
 
-    # Handle profile_url (it might be a key or a legacy full URL)
-    profile_url = None
-    if student and student.profile_url:
-        if student.profile_url.startswith("http"):
-            profile_url = student.profile_url
-        else:
-            try:
-                storage = StorageFactory.get_storage()
-                profile_url = storage.generate_download_url(
-                    object_key=student.profile_url,
-                    expires_in=31536000,
-                )
-            except Exception:
-                profile_url = None
+    # 4. Centralized Avatar Logic (Handles defaults)
+    profile_url = StorageURLCache.get_avatar_url(student.profile_url if student else None)
 
     profile_data = {
         "user_id": current_user.id,
@@ -57,4 +60,10 @@ def get_my_profile(
         "following_count": following_count,
         "is_student": student is not None,
     }
+    
+    # 5. Cache for 5 minutes
+    cache.set(cache_key, profile_data, ttl=300)
+    
+    profile_data["is_following"] = False
+    
     return ProfileResponse(**profile_data)

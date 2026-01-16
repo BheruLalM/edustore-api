@@ -10,18 +10,21 @@ class StorageURLCache:
     """Centralized caching for storage URLs"""
     
     @staticmethod
-    def get_avatar_url(object_key: str | None) -> str | None:
+    def get_avatar_url(object_key: str | None) -> str:
         """
-        Get avatar URL with Redis caching
+        Get avatar URL with Redis caching and fallback
         
         Args:
             object_key: Storage object key or full URL
             
         Returns:
-            Signed URL or None if not found
+            URL (Fallback to default if not found)
         """
+        from core.config import storage_setting
+        default_url = storage_setting.DEFAULT_AVATAR_URL
+
         if not object_key:
-            return None
+            return default_url
             
         # If already a full URL, return as-is
         if object_key.startswith("http"):
@@ -38,13 +41,15 @@ class StorageURLCache:
             storage = StorageFactory.get_storage()
             avatar_url = storage.generate_download_url(
                 object_key=object_key,
-                expires_in=31536000,  # 1 year (avatars don't change often)
+                expires_in=31536000,  # 1 year
             )
             # Cache for 1 hour
-            cache.set(cache_key, avatar_url, ttl=3600)
-            return avatar_url
+            if avatar_url:
+                cache.set(cache_key, avatar_url, ttl=3600)
+                return avatar_url
+            return default_url
         except Exception:
-            return None
+            return default_url
     
     @staticmethod
     def get_file_url(object_key: str | None, expires_in: int = 3600) -> str | None:

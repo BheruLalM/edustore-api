@@ -44,6 +44,12 @@ class UnFollowService:
         # Invalidate cache
         cache.delete(f"user_profile_static:{target_user_id}")
         cache.delete(f"user_profile_static:{current_user.id}")
+        cache.delete_pattern(f"user:followers:{target_user_id}:*")
+        cache.delete_pattern(f"user:following:{current_user.id}:*")
+        
+        # Clear user state cache
+        from services.cache.user_state import UserStateCache
+        UserStateCache.clear_user_state(current_user.id)
 
         return {
             "unfollowed": True,

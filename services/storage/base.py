@@ -25,3 +25,13 @@ class Storage(ABC):
     @abstractmethod
     def delete_object(self, *, object_key: str) -> None:
         pass
+
+    @abstractmethod
+    def upload_file(
+        self,
+        *,
+        object_key: str,
+        file_content: bytes,
+        content_type: str,
+    ) -> str:
+        pass

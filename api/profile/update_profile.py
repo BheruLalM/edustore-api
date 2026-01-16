@@ -19,6 +19,7 @@ def update_profile_details(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Update profile details - Optimized with background sync"""
     student = db.query(Student).filter(
         Student.user_id == current_user.id
     ).first()
@@ -27,50 +28,47 @@ def update_profile_details(
         student = Student(user_id=current_user.id)
         db.add(student)
 
-    if data.course is not None:
-        student.course = data.course
-
-    if data.college is not None:
-        student.college = data.college
-
-    if data.semester is not None:
-        student.semester = data.semester
-    if data.name is not None:
-        student.name = data.name 
+    # 1. Update fields
+    update_sync_needed = False
+    if data.course is not None: student.course = data.course; update_sync_needed = True
+    if data.college is not None: student.college = data.college; update_sync_needed = True
+    if data.semester is not None: student.semester = data.semester; update_sync_needed = True
+    if data.name is not None: student.name = data.name; update_sync_needed = True
 
     db.commit()
     db.refresh(student)
     
-    # Invalidate Cache
+    # 2. Invalidate Profile Cache
     from services.cache.redis_service import cache
     cache.delete(f"user_profile_static:{current_user.id}")
 
-    # Resolve profile URL for chat sync
-    profile_url_signed = ""
-    if student.profile_url:
-        if student.profile_url.startswith("http"):
-             profile_url_signed = student.profile_url
-        else:
-            try:
-                from services.storage.factory import StorageFactory
-                storage = StorageFactory.get_storage()
-                profile_url_signed = storage.generate_download_url(
-                    object_key=student.profile_url,
-                    expires_in=31536000,
-                )
-            except Exception:
-                profile_url_signed = ""
-
-    # Sync to Chat
-    sync_data = {
-        "email": current_user.email,
-        "fullName": student.name or current_user.email.split('@')[0],
-        "postgresId": str(current_user.id),
-        "profilePic": profile_url_signed,
-        "bio": "" 
-    }
-    background_tasks.add_task(sync_user_to_chat, sync_data)
+    # 3. Offload Chat Sync & URL Signing to Background
+    if update_sync_needed:
+        background_tasks.add_task(
+            _bg_sync_profile_to_chat,
+            current_user.id,
+            current_user.email,
+            student.name,
+            student.profile_url
+        )
 
     return {
-        "message": "Profile details updated successfully"
+        "message": "Profile details updated successfully",
+        "status": "success"
     }
+
+async def _bg_sync_profile_to_chat(user_id: int, email: str, name: str, profile_url: str):
+    """Helper to handle signing and syncing in background"""
+    from services.storage.url_cache import StorageURLCache
+    
+    # Use the centralized helper which handles defaults and caching
+    final_profile_url = StorageURLCache.get_avatar_url(profile_url)
+    
+    sync_data = {
+        "email": email,
+        "fullName": name or email.split('@')[0],
+        "postgresId": str(user_id),
+        "profilePic": final_profile_url,
+        "bio": "" 
+    }
+    await sync_user_to_chat(sync_data)

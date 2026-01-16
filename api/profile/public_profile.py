@@ -44,20 +44,9 @@ def get_user_profile(
             .first()
         )
 
-        # Generate download URL from object_key if avatar exists
-        profile_url = None
-        if student and student.profile_url:
-            if student.profile_url.startswith("http"):
-                 profile_url = student.profile_url
-            else:
-                try:
-                    storage = StorageFactory.get_storage()
-                    profile_url = storage.generate_download_url(
-                        object_key=student.profile_url,
-                        expires_in=31536000,  # 1 year
-                    )
-                except Exception:
-                    profile_url = None
+        # Generate avatar URL using cache service (handles defaults and signing)
+        from services.storage.url_cache import StorageURLCache
+        profile_url = StorageURLCache.get_avatar_url(student.profile_url if student else None)
 
         # OPTIMIZED: Get follower and following counts in single query
         from sqlalchemy import func, case
@@ -91,11 +80,10 @@ def get_user_profile(
     # 2. Add DYNAMIC (user-specific) data
     # Check if current user follows this profile
     is_following = False
-    if current_user:
-        is_following = db.query(Follow).filter(
-            Follow.follower_id == current_user.id,
-            Follow.following_id == user_id
-        ).first() is not None
+    if current_user and current_user.id != user_id:
+        from services.cache.user_state import UserStateCache
+        following_ids = UserStateCache.get_following_ids(db, current_user.id)
+        is_following = user_id in following_ids
 
     # Merge dynamic data
     final_response = profile_data.copy()
