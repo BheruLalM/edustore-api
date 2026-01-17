@@ -56,10 +56,11 @@ async def catch_exceptions_middleware(request: Request, call_next):
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
 # 1. CORS Middleware (Outermost - ensures headers on ALL responses)
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-origins = [frontend_url]
-
-print(f"🌐 CORS enabled for: {frontend_url}")
+origins = [
+    "https://edustore-omega.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 app.add_middleware(
     CORSMiddleware,
