@@ -28,6 +28,12 @@ EduStore is a **comprehensive educational platform backend** designed with **sca
 - ⚡ **High Performance** - Redis caching for OTP and session management
 - 📧 **Email Integration** - SMTP-based OTP delivery
 - 🛡️ **Rate Limiting** - Redis-based API rate limiting
+<<<<<<< HEAD
+=======
+- 🚦 **Health Monitoring** - Integrated `/health` endpoint for DB and Redis status
+- 🦾 **Production Ready** - Environment-aware config with startup validation
+
+>>>>>>> 5cfc842 (new version of it)
 
 ---
 
@@ -97,8 +103,14 @@ EduStore is a **comprehensive educational platform backend** designed with **sca
 | **Authentication**   | JWT (python-jose) | 3.3.0   |
 | **Password Hashing** | Argon2            | 23.1.0  |
 | **Caching**          | Redis             | 5.0.8   |
+<<<<<<< HEAD
 | **Email**            | FastAPI-Mail      | 1.4.1   |
 | **Storage**          | Supabase          | -       |
+=======
+| **Email**            | Brevo API         | 7.6.0   |
+| **Storage**          | Cloudinary        | 1.41.0  |
+| **Caching**          | Upstash Redis     | 1.5.0   |
+>>>>>>> 5cfc842 (new version of it)
 
 ---
 
@@ -739,6 +751,7 @@ pip install -r requirements.txt
 
 ### 4. Environment Configuration
 
+<<<<<<< HEAD
 Create `.env` file:
 
 ```env
@@ -768,6 +781,49 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_BUCKET=student_files_photos
 ```
 
+=======
+Create a `.env` file in the root directory:
+
+```env
+# Mode: development | production
+ENVIRONMENT=development
+
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://...
+
+# Brevo Email API (Primary)
+BREVO_API_KEY=xkeysib-...
+EMAIL_FROM=munchnice@gmail.com
+
+# SMTP (Legacy / Local Dev only)
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+
+# Redis (Upstash)
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+
+# Storage (Cloudinary)
+STORAGE_PROVIDER=cloudinary
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+
+# Service URLs
+FRONTEND_URL=http://localhost:5173
+CHAT_SERVICE_URL=http://localhost:3000
+
+# Backend Secrets
+SECRET_KEY=your-secure-secret-key-here
+```
+
+### 5. Startup Validation
+The application will validate your environment variables on startup. In `production` mode:
+- `SECRET_KEY` must be at least 32 characters.
+- `BREVO_API_KEY` and `EMAIL_FROM` must be valid.
+- `FRONTEND_URL` and `CHAT_SERVICE_URL` cannot contain `localhost`.
+
+>>>>>>> 5cfc842 (new version of it)
 ### 5. Database Setup
 
 ```bash
@@ -1167,6 +1223,7 @@ All sensitive configuration is stored in `.env` file:
 
 ---
 
+<<<<<<< HEAD
 ## 🚀 Deployment
 
 ### Production Checklist
@@ -1181,6 +1238,24 @@ All sensitive configuration is stored in `.env` file:
 - [ ] Set up CI/CD pipeline
 - [ ] Enable rate limiting
 - [ ] Configure email service for production
+=======
+### Production Deployment (Render)
+
+This repository includes a [`render.yaml`](file:///c:/Users/ASUS/Pictures/git/edustore-api/render.yaml) for automated deployment.
+
+1. Create a new "Blueprint" on Render.
+2. Link this repository.
+3. Configure the secrets in the Render Dashboard.
+4. Deployment will automatically:
+   - Run database migrations (`alembic upgrade head`).
+   - Start 4 worker processes.
+   - Monitor health via `/health`.
+
+### 🧪 System Health
+Check your deployment status via:
+- `GET /health`: Returns status of Database and Redis.
+- `GET /`: Returns basic uptime signal.
+>>>>>>> 5cfc842 (new version of it)
 
 ### Recommended Hosting
 
