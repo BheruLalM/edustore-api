@@ -15,9 +15,9 @@ class BrevoProvider(EmailService):
     """
 
     def __init__(self):
-        # Configure Brevo API client
         configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key['api-key'] = mail_setting.BREVO_API_KEY
+        configuration.api_key["api-key"] = mail_setting.BREVO_API_KEY
+
         self.api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
             sib_api_v3_sdk.ApiClient(configuration)
         )
@@ -27,56 +27,55 @@ class BrevoProvider(EmailService):
         to_email: str,
         subject: str,
         body: str,
-        html: bool = False
+        html: bool = False,
     ):
         """
         Send email via Brevo API.
-        
-        Args:
-            to_email: Recipient email address
-            subject: Email subject
-            body: Email body content
-            html: If True, body is treated as HTML; otherwise plain text
-        
-        Raises:
-            EmailSendFailed: If email sending fails
         """
         try:
-            # Prepare sender
+            # Sender (MUST be verified in Brevo)
             sender = {
                 "email": mail_setting.EMAIL_FROM,
-                "name": mail_setting.EMAIL_FROM_NAME
+                "name": mail_setting.EMAIL_FROM_NAME or "EduStore",
             }
-            
-            # Prepare recipient
-            to = [{"email": to_email}]
-            
-            # Prepare email content
-            if html:
-                send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-                    to=to,
-                    sender=sender,
-                    subject=subject,
-                    html_content=body
-                )
-            else:
-                send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-                    to=to,
-                    sender=sender,
-                    subject=subject,
-                    text_content=body
-                )
 
-            # Send email via Brevo API
+            # Reply-To (REQUIRED for freemail senders like gmail.com)
+            reply_to = {
+                "email": mail_setting.EMAIL_FROM,
+                "name": mail_setting.EMAIL_FROM_NAME or "EduStore",
+            }
+
+            # Recipient
+            to = [{"email": to_email}]
+
+            # Build email
+            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+                to=to,
+                sender=sender,
+                reply_to=reply_to,
+                subject=subject,
+                html_content=body if html else None,
+                text_content=None if html else body,
+            )
+
+            # Send email
             api_response = self.api_instance.send_transac_email(send_smtp_email)
-            logger.info(f"Email sent successfully via Brevo to {to_email}. Message ID: {api_response.message_id}")
+
+            logger.info(
+                f"Email sent successfully via Brevo to {to_email}. "
+                f"Message ID: {api_response.message_id}"
+            )
 
         except ApiException as e:
-            logger.error(f"Brevo API error while sending email to {to_email}: {e}", exc_info=True)
-            # Don't crash the app, just log the error
-            # Optionally raise if you want to handle it upstream
-            raise EmailSendFailed(f"Brevo API error: {e.status}") from e
+            logger.error(
+                f"Brevo API error while sending email to {to_email}: {e}",
+                exc_info=True,
+            )
+            raise EmailSendFailed("Brevo API error while sending email") from e
 
         except Exception as e:
-            logger.error(f"Unexpected error while sending email via Brevo to {to_email}: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error while sending email via Brevo to {to_email}: {e}",
+                exc_info=True,
+            )
             raise EmailSendFailed("Unexpected email error") from e
