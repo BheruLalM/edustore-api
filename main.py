@@ -1,5 +1,9 @@
 import os
 import time
+<<<<<<< HEAD
+=======
+import sys
+>>>>>>> 5cfc842 (new version of it)
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +12,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import traceback
 import logging
 
+<<<<<<< HEAD
+=======
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
+
+>>>>>>> 5cfc842 (new version of it)
 from api.api_router import api_router
 from core.exceptions import (
     DomainError,
@@ -56,11 +71,30 @@ async def catch_exceptions_middleware(request: Request, call_next):
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
 # 1. CORS Middleware (Outermost - ensures headers on ALL responses)
+<<<<<<< HEAD
 origins = [
     "https://edustore-omega.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+=======
+from core.config import app_settings
+
+if app_settings.is_production:
+    # Production: Only allow production frontend
+    origins = [
+        app_settings.FRONTEND_URL,
+        "https://edustore-omega.vercel.app",
+        "https://*.vercel.app",  # Allow Vercel preview deployments
+    ]
+else:
+    # Development: Allow localhost
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",  # For testing
+    ]
+>>>>>>> 5cfc842 (new version of it)
 
 app.add_middleware(
     CORSMiddleware,
@@ -112,3 +146,43 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.get("/")
 async def home(request: Request):
     return {"message": "Hello! You are within the rate limit."}
+<<<<<<< HEAD
+=======
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for production monitoring"""
+    from db.deps import get_db
+    from core.redis import redis_client
+    from sqlalchemy import text
+    
+    health_status = {
+        "status": "healthy",
+        "environment": app_settings.ENVIRONMENT,
+        "database": "unknown",
+        "redis": "unknown",
+    }
+    
+    # Check database connection
+    try:
+        db = next(get_db())
+        db.execute(text("SELECT 1"))
+        health_status["database"] = "connected"
+    except Exception as e:
+        health_status["status"] = "unhealthy"
+        health_status["database"] = f"error: {str(e)}"
+    
+    # Check Redis connection
+    try:
+        if redis_client:
+            redis_client.ping()
+            health_status["redis"] = "connected"
+        else:
+            health_status["redis"] = "not configured"
+    except Exception as e:
+        health_status["redis"] = f"error: {str(e)}"
+    
+    status_code = 200 if health_status["status"] == "healthy" else 503
+    return JSONResponse(status_code=status_code, content=health_status)
+
+>>>>>>> 5cfc842 (new version of it)
