@@ -43,7 +43,10 @@ class BrevoProvider(EmailService):
         """
         try:
             # Prepare sender
-            sender = {"email": mail_setting.EMAIL_FROM}
+            sender = {
+                "email": mail_setting.EMAIL_FROM,
+                "name": mail_setting.EMAIL_FROM_NAME
+            }
             
             # Prepare recipient
             to = [{"email": to_email}]
