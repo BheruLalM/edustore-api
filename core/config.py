@@ -16,8 +16,15 @@ class Database_Setting(AppSettings):
 
 
 class MailSetting(AppSettings):
+    # Brevo API Settings
+    BREVO_API_KEY: str
+    EMAIL_FROM: str
+    
+    # SMTP Settings (Legacy)
     SMTP_USER: str
     SMTP_PASS: str
+    
+    # JWT Settings
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 20

@@ -10,7 +10,7 @@ from models.user import User
 from services.auth.jwt import create_access_token, create_refresh_token
 from dependencies.refresh_cookie_store import store_refresh_token
 from services.auth.otp import save_otp, otp_generator, invalidate_otp, verify_otp
-from services.email.smtpprovider import SmtpProvider
+from services.email.brevo_provider import BrevoProvider
 from core.config import mail_setting
 from core.exceptions import (
     RedisUploadFailed,
@@ -34,7 +34,7 @@ def request_otp(data: login, background_tasks: BackgroundTasks):
         subject = "EduStore OTP"
         body = f"This is your OTP {otp} valid for 5 minutes"
 
-        emailer = SmtpProvider()
+        emailer = BrevoProvider()
         background_tasks.add_task(emailer.send_email, email, subject, body)
 
         return {"message": "OTP sent successfully"}
