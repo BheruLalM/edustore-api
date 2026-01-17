@@ -19,6 +19,7 @@ class MailSetting(AppSettings):
     # Brevo API Settings
     BREVO_API_KEY: str
     EMAIL_FROM: str
+    EMAIL_FROM_NAME: str = "EduStore"
     
     # SMTP Settings (Legacy)
     SMTP_USER: str
