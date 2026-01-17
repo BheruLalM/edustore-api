@@ -1,9 +1,6 @@
 from pydantic_settings import BaseSettings
-<<<<<<< HEAD
-=======
 from typing import Literal
 import sys
->>>>>>> 5cfc842 (new version of it)
 
 
 class AppSettings(BaseSettings):
@@ -11,11 +8,6 @@ class AppSettings(BaseSettings):
         env_file = ".env"
         extra = "ignore"
     
-<<<<<<< HEAD
-    GOOGLE_CLIENT_ID: str = "715484256238-t9k2t4d6qoedf3bik945uk2depejkd8t.apps.googleusercontent.com"
-        # Mapping for environment variables that might be lowercase in .env but uppercase here
-        # Actually pydantic BaseSettings handles case-insensitivity by default usually, but let's be safe
-=======
     # Environment Detection (REQUIRED)
     ENVIRONMENT: Literal["development", "production"] = "development"
     
@@ -34,7 +26,6 @@ class AppSettings(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development environment"""
         return self.ENVIRONMENT == "development"
->>>>>>> 5cfc842 (new version of it)
 
 
 class Database_Setting(AppSettings):
@@ -77,18 +68,13 @@ class StorageSetting(AppSettings):
     DEFAULT_AVATAR_URL: str = "https://res.cloudinary.com/dly8p9v99/image/upload/v1736616449/edustore/avatars/default-avatar_v0r4j8.png"
 
 
-<<<<<<< HEAD
-=======
 # Initialize settings
 app_settings = AppSettings()
->>>>>>> 5cfc842 (new version of it)
 DatabaseSetting = Database_Setting()
 mail_setting = MailSetting()
 redis_setting = RedisSetting()
 storage_setting = StorageSetting()
 service_setting = ServiceSettings()
-<<<<<<< HEAD
-=======
 
 
 # Startup Validation
@@ -134,4 +120,3 @@ def validate_environment():
 
 # Run validation on import
 validate_environment()
->>>>>>> 5cfc842 (new version of it)

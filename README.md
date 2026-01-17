@@ -28,12 +28,8 @@ EduStore is a **comprehensive educational platform backend** designed with **sca
 - ⚡ **High Performance** - Redis caching for OTP and session management
 - 📧 **Email Integration** - SMTP-based OTP delivery
 - 🛡️ **Rate Limiting** - Redis-based API rate limiting
-<<<<<<< HEAD
-=======
 - 🚦 **Health Monitoring** - Integrated `/health` endpoint for DB and Redis status
 - 🦾 **Production Ready** - Environment-aware config with startup validation
-
->>>>>>> 5cfc842 (new version of it)
 
 ---
 
@@ -103,14 +99,9 @@ EduStore is a **comprehensive educational platform backend** designed with **sca
 | **Authentication**   | JWT (python-jose) | 3.3.0   |
 | **Password Hashing** | Argon2            | 23.1.0  |
 | **Caching**          | Redis             | 5.0.8   |
-<<<<<<< HEAD
-| **Email**            | FastAPI-Mail      | 1.4.1   |
-| **Storage**          | Supabase          | -       |
-=======
 | **Email**            | Brevo API         | 7.6.0   |
 | **Storage**          | Cloudinary        | 1.41.0  |
 | **Caching**          | Upstash Redis     | 1.5.0   |
->>>>>>> 5cfc842 (new version of it)
 
 ---
 
@@ -751,37 +742,6 @@ pip install -r requirements.txt
 
 ### 4. Environment Configuration
 
-<<<<<<< HEAD
-Create `.env` file:
-
-```env
-# Database
-DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/edustore
-
-# JWT
-SECRET_KEY=your-secret-key-here
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=20
-ALGORITHM=HS256
-
-# Email (SMTP)
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-
-# Storage
-STORAGE_PROVIDER=supabase
-SUPABASE_URL=https://your-project.supabase.co/
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_BUCKET=student_files_photos
-```
-
-=======
 Create a `.env` file in the root directory:
 
 ```env
@@ -1223,22 +1183,6 @@ All sensitive configuration is stored in `.env` file:
 
 ---
 
-<<<<<<< HEAD
-## 🚀 Deployment
-
-### Production Checklist
-
-- [ ] Set strong `SECRET_KEY` in production
-- [ ] Use production database (not SQLite)
-- [ ] Configure Redis for production
-- [ ] Set up HTTPS/SSL certificates
-- [ ] Configure CORS for production domain
-- [ ] Set up monitoring and logging
-- [ ] Configure backup strategy
-- [ ] Set up CI/CD pipeline
-- [ ] Enable rate limiting
-- [ ] Configure email service for production
-=======
 ### Production Deployment (Render)
 
 This repository includes a [`render.yaml`](file:///c:/Users/ASUS/Pictures/git/edustore-api/render.yaml) for automated deployment.
@@ -1255,7 +1199,6 @@ This repository includes a [`render.yaml`](file:///c:/Users/ASUS/Pictures/git/ed
 Check your deployment status via:
 - `GET /health`: Returns status of Database and Redis.
 - `GET /`: Returns basic uptime signal.
->>>>>>> 5cfc842 (new version of it)
 
 ### Recommended Hosting
 
