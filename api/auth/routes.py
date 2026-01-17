@@ -4,21 +4,13 @@ from sqlalchemy.orm import Session
 from api.auth.schema import login, otp_verify, google_login
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-<<<<<<< HEAD
-from core.config import mail_setting, DatabaseSetting
-=======
 from core.config import mail_setting, DatabaseSetting, app_settings
->>>>>>> 5cfc842 (new version of it)
 from db.deps import get_db
 from models.user import User
 from services.auth.jwt import create_access_token, create_refresh_token
 from dependencies.refresh_cookie_store import store_refresh_token
 from services.auth.otp import save_otp, otp_generator, invalidate_otp, verify_otp
 from services.email.brevo_provider import BrevoProvider
-<<<<<<< HEAD
-from core.config import mail_setting
-=======
->>>>>>> 5cfc842 (new version of it)
 from core.exceptions import (
     RedisUploadFailed,
     OTPCooldownActive,
@@ -120,13 +112,8 @@ def verify_otp_endpoint(
         key="access_token",
         value=access_token,
         httponly=True,
-<<<<<<< HEAD
-        secure=False,
-        samesite="strict",
-=======
         secure=app_settings.is_production,  # True in production, False in dev
         samesite="lax",  # Allow OAuth redirects
->>>>>>> 5cfc842 (new version of it)
         max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -134,13 +121,8 @@ def verify_otp_endpoint(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-<<<<<<< HEAD
-        secure=False,
-        samesite="strict",
-=======
         secure=app_settings.is_production,  # True in production, False in dev
         samesite="lax",  # Allow OAuth redirects
->>>>>>> 5cfc842 (new version of it)
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
@@ -217,13 +199,8 @@ def google_auth_endpoint(
             key="access_token",
             value=access_token,
             httponly=True,
-<<<<<<< HEAD
-            secure=False,
-            samesite="strict",
-=======
             secure=app_settings.is_production,  # True in production, False in dev
             samesite="lax",  # Allow OAuth redirects
->>>>>>> 5cfc842 (new version of it)
             max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
@@ -231,13 +208,8 @@ def google_auth_endpoint(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-<<<<<<< HEAD
-            secure=False,
-            samesite="strict",
-=======
             secure=app_settings.is_production,  # True in production, False in dev
             samesite="lax",  # Allow OAuth redirects
->>>>>>> 5cfc842 (new version of it)
             max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         )
 
