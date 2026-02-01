@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Request, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -28,6 +28,7 @@ router = APIRouter(prefix="/documents", tags=["Document"])
 # -------------------- Direct Upload (Cloudinary) --------------------
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document_direct(
+    request: Request,
     file: UploadFile = File(...),
     title: str = Form(...),
     doc_type: str = Form(...),
@@ -38,6 +39,17 @@ async def upload_document_direct(
 ):
     """Direct upload endpoint for Cloudinary - uploads file and creates document in one step"""
     try:
+        # 0. Size Validation (20MB)
+        MAX_DOCUMENT_SIZE = 20 * 1024 * 1024
+        
+        # Check Content-Length header first for optimization
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_DOCUMENT_SIZE:
+             raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Document size exceeds 20 MB limit",
+            )
+            
         # Generate object key
         extension = _extension_from_document_content_type(file.content_type)
         object_key = document_upload_key(
