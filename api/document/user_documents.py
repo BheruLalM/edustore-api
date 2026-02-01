@@ -58,15 +58,25 @@ def get_user_public_documents(
         bookmarked_exists = db.query(Bookmark.id).filter(Bookmark.document_id == Document.id, Bookmark.user_id == current_user_id).correlate(Document).exists()
         is_bookmarked = case((bookmarked_exists, True), else_=False).label("is_bookmarked")
 
-    results = (
+    query = (
         db.query(Document, User, Student, like_sq, comm_sq, is_liked, is_bookmarked)
         .join(User, Document.user_id == User.id)
         .outerjoin(Student, Student.user_id == User.id)
-        .filter(
-            Document.user_id == user_id,
-            Document.visibility == "public",
-            Document.is_deleted.is_(False),
-        )
+    )
+
+    # 2. Filter Logic (Owner sees all, others see public only)
+    filters = [
+        Document.user_id == user_id,
+        Document.is_deleted.is_(False),
+    ]
+    
+    # If query is NOT from owner, restrict to public
+    is_owner = current_user and current_user.id == user_id
+    if not is_owner:
+        filters.append(Document.visibility == "public")
+
+    results = (
+        query.filter(*filters)
         .order_by(Document.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -85,6 +95,7 @@ def get_user_public_documents(
             "id": doc.id,
             "title": doc.title,
             "doc_type": doc.doc_type,
+            "visibility": doc.visibility,
             "file_size": doc.file_size,
             "created_at": doc.created_at,
             "owner_id": doc.user_id,
