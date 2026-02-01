@@ -36,8 +36,15 @@ class LikeService:
             )
             db.add(like)
             db.commit()
+            
+            # Cache Invalidation
             from services.cache.cache_manager import CacheManager
-            CacheManager.invalidate_document(document_id)
+            print(f"❤️ Like added: Doc {document_id} by User {current_user.id}")
+            CacheManager.invalidate_document(
+                document_id=document_id,
+                owner_id=document.user_id,
+                current_user_id=current_user.id
+            )
             return True  # Successfully liked
         except IntegrityError:
             # Like already exists, remove it (unlike)
@@ -47,8 +54,15 @@ class LikeService:
                 Like.document_id == document_id,
             ).delete()
             db.commit()
+            
+            # Cache Invalidation
             from services.cache.cache_manager import CacheManager
-            CacheManager.invalidate_document(document_id)
+            print(f"💔 Like removed: Doc {document_id} by User {current_user.id}")
+            CacheManager.invalidate_document(
+                document_id=document_id,
+                owner_id=document.user_id,
+                current_user_id=current_user.id
+            )
             return False  # Successfully unliked
 
     @staticmethod
@@ -66,6 +80,18 @@ class LikeService:
         if like:
             db.delete(like)
             db.commit()
+            
+            # Fetch document to get owner for cache clearing
+            document = db.query(Document).filter(Document.id == document_id).first()
+            owner_id = document.user_id if document else None
+            
+            from services.cache.cache_manager import CacheManager
+            print(f"💔 Like removed (Direct): Doc {document_id} by User {current_user.id}")
+            CacheManager.invalidate_document(
+                document_id=document_id,
+                owner_id=owner_id,
+                current_user_id=current_user.id
+            )
 
         return False  # idempotent: already unliked
 
