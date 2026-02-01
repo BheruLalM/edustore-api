@@ -9,10 +9,9 @@ class AppSettings(BaseSettings):
         extra = "ignore"
     
     # Environment Detection (REQUIRED)
-    ENVIRONMENT: Literal["development", "production"] = "development"
+    ENVIRONMENT: Literal["development", "production"] = "production"
     
-    # Frontend URL for CORS
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str
     
     # Google OAuth
     GOOGLE_CLIENT_ID: str = "715484256238-t9k2t4d6qoedf3bik945uk2depejkd8t.apps.googleusercontent.com"
@@ -50,7 +49,7 @@ class MailSetting(AppSettings):
 
 
 class ServiceSettings(AppSettings):
-    CHAT_SERVICE_URL: str = "http://localhost:3000"
+    CHAT_SERVICE_URL: str
 
 
 class RedisSetting(AppSettings):
