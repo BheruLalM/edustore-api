@@ -31,7 +31,11 @@ def like_document(
     )
 
     # Get updated count
-    updated_count, _ = LikeService.get_like_info(db, document_id, current_user)
+    updated_count, _ = LikeService.get_like_info(
+        db=db,
+        document_id=document_id,
+        current_user=current_user
+    )
 
     return {
         "document_id": document_id,
@@ -57,7 +61,11 @@ def unlike_document(
     )
 
     # Get updated count
-    updated_count, _ = LikeService.get_like_info(db, document_id, current_user)
+    updated_count, _ = LikeService.get_like_info(
+        db=db,
+        document_id=document_id,
+        current_user=current_user
+    )
 
     return {
         "document_id": document_id,
