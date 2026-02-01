@@ -11,8 +11,16 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/refresh")
-def refresh_session(response: Response, request: Request):
+async def refresh_session(response: Response, request: Request):
     refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        try:
+            body = await request.json()
+            refresh_token = body.get("refresh_token")
+        except:
+            pass
+    
     if not refresh_token:
         raise DomainError("Not Authenticated")
 
@@ -53,4 +61,9 @@ def refresh_session(response: Response, request: Request):
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
-    return {"message": "Session refreshed"}
+    return {
+        "message": "Session refreshed",
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
+    }

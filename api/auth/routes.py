@@ -126,7 +126,12 @@ def verify_otp_endpoint(
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
-    return {"message": "Login successful"}
+    return {
+        "message": "Login successful",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 
 @router.post("/google")
@@ -213,7 +218,12 @@ def google_auth_endpoint(
             max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         )
 
-        return {"message": "Login successful"}
+        return {
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
     except ValueError:
         from core.exceptions import DomainError

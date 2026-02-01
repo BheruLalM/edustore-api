@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status, Cookie
+from fastapi import Depends, HTTPException, status, Cookie, Header
 from jose import JWTError, ExpiredSignatureError
 from sqlalchemy.orm import Session
 
@@ -8,17 +8,25 @@ from services.auth.jwt import decode_token
 
 
 def get_current_user(
+    authorization: str | None = Header(default=None),
     access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
-    if not access_token:
+    token = None
+    
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    elif access_token:
+        token = access_token
+    
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
 
     try:
-        payload = decode_token(access_token)
+        payload = decode_token(token)
 
     except ExpiredSignatureError:
         raise HTTPException(
@@ -56,6 +64,7 @@ def get_current_user(
 
 
 def get_current_user_optional(
+    authorization: str | None = Header(default=None),
     access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User | None:
@@ -63,11 +72,18 @@ def get_current_user_optional(
     Optional authentication - returns User if authenticated, None if not.
     Does not raise HTTPException for missing/invalid tokens.
     """
-    if not access_token:
+    token = None
+    
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    elif access_token:
+        token = access_token
+    
+    if not token:
         return None
 
     try:
-        payload = decode_token(access_token)
+        payload = decode_token(token)
     except (ExpiredSignatureError, JWTError):
         return None
 
