@@ -112,8 +112,8 @@ def verify_otp_endpoint(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=app_settings.is_production,  # True in production, False in dev
-        samesite="lax",  # Allow OAuth redirects
+        secure=True,
+        samesite="none",
         max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -121,8 +121,8 @@ def verify_otp_endpoint(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=app_settings.is_production,  # True in production, False in dev
-        samesite="lax",  # Allow OAuth redirects
+        secure=True,
+        samesite="none",
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
@@ -199,8 +199,8 @@ def google_auth_endpoint(
             key="access_token",
             value=access_token,
             httponly=True,
-            secure=app_settings.is_production,  # True in production, False in dev
-            samesite="lax",  # Allow OAuth redirects
+            secure=True,
+            samesite="none",
             max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
@@ -208,8 +208,8 @@ def google_auth_endpoint(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-            secure=app_settings.is_production,  # True in production, False in dev
-            samesite="lax",  # Allow OAuth redirects
+            secure=True,
+            samesite="none",
             max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         )
 
