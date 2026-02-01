@@ -14,7 +14,7 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 
 # Allowed image types
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
 
 
 from db.session import SessionLocal
@@ -90,8 +90,8 @@ async def upload_avatar(
     
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File too large (Max 5MB)",
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Profile image must be under 3 MB",
         )
     
     # 3. Predict / Generate Key
