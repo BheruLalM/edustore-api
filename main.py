@@ -60,23 +60,26 @@ async def catch_exceptions_middleware(request: Request, call_next):
             },
         )
 
-# ------------------------------------------------------------------
-# GZIP
-# ------------------------------------------------------------------
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+@app.middleware("http")
+async def options_preflight_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": app_settings.FRONTEND_URL,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    return await call_next(request)
 
-# ------------------------------------------------------------------
-# CORS (ENV AWARE)
-# ------------------------------------------------------------------
-origins = [
-    "https://edustore-omega.vercel.app",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[app_settings.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
