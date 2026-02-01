@@ -6,6 +6,7 @@ from typing import List
 class LikeToggleResponse(BaseModel):
     document_id: int
     is_liked: bool
+    liked: bool
     like_count: int
 
 

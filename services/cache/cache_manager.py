@@ -16,11 +16,23 @@ class CacheManager:
         print(f"🧹 User {user_id} docs cache invalidated")
 
     @staticmethod
-    def invalidate_document(document_id: int):
-        """Clear document detail cache"""
+    def invalidate_document(document_id: int, owner_id: int = None, current_user_id: int = None):
+        """Clear document detail and related lists"""
+        # 1. Document Detail
         cache.delete(f"doc:detail:static:{document_id}")
-        cache.delete_pattern("feed:*") # Counts might have changed globally
-        print(f"🧹 Document {document_id} cache invalidated")
+        
+        # 2. Public Feeds (Global)
+        cache.delete_pattern("feed:*")
+        
+        # 3. Owner's Document List (Profile)
+        if owner_id:
+            cache.delete_pattern(f"user:docs:{owner_id}:*")
+            
+        # 4. Current User's Bookmarks (If they interact, status might update)
+        if current_user_id:
+            cache.delete_pattern(f"user:bookmarks:{current_user_id}:*")
+            
+        print(f"🧹 Document {document_id} cache invalidated (Owner: {owner_id}, Actor: {current_user_id})")
 
     @staticmethod
     def invalidate_profile(user_id: int):

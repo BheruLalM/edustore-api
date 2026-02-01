@@ -40,6 +40,7 @@ def like_document(
     return {
         "document_id": document_id,
         "is_liked": is_liked,
+        "liked": is_liked,
         "like_count": updated_count,
     }
 
@@ -70,6 +71,7 @@ def unlike_document(
     return {
         "document_id": document_id,
         "is_liked": is_liked,
+        "liked": is_liked,
         "like_count": updated_count,
     }
 
