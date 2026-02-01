@@ -2,14 +2,14 @@
 Chat microservice integration service.
 Handles communication with the Node.js chat server and student verification.
 """
-import os
 import httpx
 from sqlalchemy.orm import Session
 from models.student import Student
 from typing import Optional, Dict, Any
+from core.config import service_setting
 
 
-CHAT_SERVICE_URL = os.getenv("CHAT_SERVICE_URL", "http://localhost:3000")
+CHAT_SERVICE_URL = service_setting.CHAT_SERVICE_URL
 
 
 async def is_student(db: Session, user_id: int) -> bool:
