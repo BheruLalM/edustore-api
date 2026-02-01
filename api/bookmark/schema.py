@@ -8,6 +8,7 @@ from typing import List, Optional
 class ToggleResponse(BaseModel):
     document_id: int
     is_bookmarked: bool
+    bookmarked: bool
 
 
 class BookmarkItem(BaseModel):

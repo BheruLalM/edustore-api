@@ -58,13 +58,20 @@ class BookmarkService:
             )
             db.add(bookmark)
             db.commit()
+            db.commit()
+            
+            # Cache Invalidation (Comprehensive)
             from services.cache.cache_manager import CacheManager
-            CacheManager.invalidate_document(document_id)
-            CacheManager.invalidate_user_docs(current_user.id)
-            CacheManager.invalidate_user_bookmarks(current_user.id)
+            CacheManager.invalidate_document(
+                document_id=document_id,
+                owner_id=document.user_id,
+                current_user_id=current_user.id
+            )
+            
             return {
                 "document_id": document.id,
                 "is_bookmarked": True,
+                "bookmarked": True,
             }
         except IntegrityError:
             # Bookmark already exists, remove it (unbookmark)
@@ -75,12 +82,16 @@ class BookmarkService:
             ).delete()
             db.commit()
             from services.cache.cache_manager import CacheManager
-            CacheManager.invalidate_document(document_id)
-            CacheManager.invalidate_user_docs(current_user.id)
-            CacheManager.invalidate_user_bookmarks(current_user.id)
+            CacheManager.invalidate_document(
+                document_id=document_id,
+                owner_id=document.user_id,
+                current_user_id=current_user.id
+            )
+            
             return {
                 "document_id": document.id,
                 "is_bookmarked": False,
+                "bookmarked": False,
             }
 
     @staticmethod
