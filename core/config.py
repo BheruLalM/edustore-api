@@ -97,6 +97,8 @@ def validate_environment():
         # Strong secret key
         if len(mail_setting.SECRET_KEY) < 32:
             errors.append("SECRET_KEY must be at least 32 characters in production")
+        if mail_setting.SECRET_KEY == "your_super_secret_key_here":
+            errors.append("You are using a default SECRET_KEY! Sessions will handle insecurely.")
 
         # Brevo API Validations
         if not mail_setting.BREVO_API_KEY or mail_setting.BREVO_API_KEY == "your_api_key_here":
