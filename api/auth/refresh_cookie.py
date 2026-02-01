@@ -39,8 +39,8 @@ def refresh_session(response: Response, request: Request):
         key="access_token",
         value=new_access_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=app_settings.is_production,
+        samesite="none" if app_settings.is_production else "lax",
         max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -48,8 +48,8 @@ def refresh_session(response: Response, request: Request):
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=app_settings.is_production,
+        samesite="none" if app_settings.is_production else "lax",
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
