@@ -5,7 +5,7 @@ from dependencies.rotate_refresh_token import rotate_refresh_token
 from services.auth.jwt import create_access_token, create_refresh_token
 from dependencies.auth import get_token_payload
 from dependencies.refresh_cookie_store import is_refresh_token_valid
-from core.config import mail_setting
+from core.config import mail_setting, app_settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -39,8 +39,8 @@ def refresh_session(response: Response, request: Request):
         key="access_token",
         value=new_access_token,
         httponly=True,
-        secure=False,
-        samesite="strict",
+        secure=app_settings.is_production,  # True in production, False in dev
+        samesite="lax",  # Allow OAuth redirects
         max_age=mail_setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -48,8 +48,8 @@ def refresh_session(response: Response, request: Request):
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        secure=False,
-        samesite="strict",
+        secure=app_settings.is_production,  # True in production, False in dev
+        samesite="lax",  # Allow OAuth redirects
         max_age=mail_setting.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: edustore-api
+    env: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      # Note: Secrets like DATABASE_URL, BREVO_API_KEY, etc. 
+      # MUST be set in the Render Dashboard environment settings.
