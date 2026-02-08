@@ -55,7 +55,7 @@ class CloudinaryStorage(Storage):
         object_key: str,
         expires_in: int = 300,
     ) -> str:
-        """Generate Cloudinary download URL - Fixed Pathing"""
+        """Generate Cloudinary download URL with proper handling for raw files (PDFs)"""
         self._validate_object_key(object_key)
         
         try:
@@ -71,21 +71,35 @@ class CloudinaryStorage(Storage):
             resource_type = 'image' if ext in image_extensions else 'raw'
             
             # For images, Cloudinary usually expects the ID without extension
-            # For raw files, it requires it.
+            # For raw files (PDFs, docs), keep the extension
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
             
             from cloudinary.utils import cloudinary_url
-            url, _ = cloudinary_url(
-                public_id,
-                secure=True,
-                resource_type=resource_type
-            )
             
-            print(f"🔗 Generated URL: {url}")
+            # For raw files, we need to add flags for proper download/viewing
+            if resource_type == 'raw':
+                # Use fl_attachment for downloads, but for viewing we need the direct URL
+                # We'll generate a URL that works for both preview and download
+                url, _ = cloudinary_url(
+                    public_id,
+                    secure=True,
+                    resource_type=resource_type,
+                    type='upload'
+                )
+            else:
+                # For images, standard URL generation
+                url, _ = cloudinary_url(
+                    public_id,
+                    secure=True,
+                    resource_type=resource_type
+                )
+            
+            print(f"🔗 Generated {resource_type} URL: {url}")
             return url
             
         except Exception as e:
+            print(f"❌ URL generation failed for {object_key}: {str(e)}")
             raise StorageOperationFailed(f"Failed to generate download URL: {str(e)}") from e
     
     def delete_object(self, *, object_key: str) -> None:
