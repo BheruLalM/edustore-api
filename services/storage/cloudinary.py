@@ -67,12 +67,12 @@ class CloudinaryStorage(Storage):
             # Determine resource_type
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
-            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # For images, Cloudinary usually expects the ID without extension
-            # For raw files, it requires it.
-            if resource_type == 'image':
+            # For images (except PDFs), Cloudinary usually expects the ID without extension
+            # For raw files and PDFs in image mode, it requires/prefers it.
+            if resource_type == 'image' and ext != '.pdf':
                 public_id = public_id.rsplit('.', 1)[0]
             
             from cloudinary.utils import cloudinary_url
@@ -97,7 +97,7 @@ class CloudinaryStorage(Storage):
             public_id = f"edustore/{object_key}"
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
-            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
             if resource_type == 'image':
@@ -129,13 +129,13 @@ class CloudinaryStorage(Storage):
             
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
-            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # For images, we strip the extension from public_id to allow Cloudinary 
+            # For images (except PDFs), we strip the extension from public_id to allow Cloudinary 
             # to serve it with different formats (transformations).
-            # For raw, we MUST keep it.
-            if resource_type == 'image':
+            # For raw and PDFs, we MUST keep it.
+            if resource_type == 'image' and ext != '.pdf':
                 public_id = public_id.rsplit('.', 1)[0]
                 
             print(f"📤 Uploading: {public_id} (Type: {resource_type})")
