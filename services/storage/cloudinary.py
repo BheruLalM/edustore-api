@@ -54,6 +54,7 @@ class CloudinaryStorage(Storage):
         *,
         object_key: str,
         expires_in: int = 300,
+        page: int = None,
     ) -> str:
         """Generate Cloudinary download URL - Fixed Pathing"""
         self._validate_object_key(object_key)
@@ -70,7 +71,7 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # 🛡️ NORMALIZATION: For 'image' resource_type (incl. PDFs), 
+            #  NORMALIZATION: For 'image' resource_type (incl. PDFs), 
             # public_id should NOT include the file extension.
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
@@ -82,6 +83,8 @@ class CloudinaryStorage(Storage):
             url_params = {"secure": True, "resource_type": resource_type}
             if ext == '.pdf':
                 url_params["format"] = "pdf"
+                if page is not None:
+                    url_params["page"] = page
                 
             url, _ = cloudinary_url(public_id, **url_params)
             
@@ -103,7 +106,7 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # 🛡️ NORMALIZATION: Match the upload public_id logic
+            # NORMALIZATION: Match the upload public_id logic
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
             
@@ -136,7 +139,7 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # 🛡️ NORMALIZATION: For 'image' resource_type (incl. PDFs),
+            # NORMALIZATION: For 'image' resource_type (incl. PDFs),
             # the public_id should NEVER include the extension.
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
@@ -151,9 +154,9 @@ class CloudinaryStorage(Storage):
             )
             
             secure_url = result.get('secure_url')
-            print(f"✅ Upload successful! URL: {secure_url}")
+            print(f"Upload successful! URL: {secure_url}")
             return secure_url
             
         except Exception as e:
-            print(f"❌ Upload failed: {str(e)}")
+            print(f" Upload failed: {str(e)}")
             raise StorageOperationFailed(f"Failed to upload file: {str(e)}") from e
