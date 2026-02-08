@@ -85,10 +85,17 @@ class CloudinaryStorage(Storage):
             
             from cloudinary.utils import cloudinary_url
             
-            # For raw files, we need to add flags for proper download/viewing
-            if resource_type == 'raw':
-                # Use fl_attachment for downloads, but for viewing we need the direct URL
-                # We'll generate a URL that works for both preview and download
+            # For PDFs, we need to add .pdf extension to the URL for browser detection
+            if ext in pdf_extensions:
+                # Use format='pdf' to add .pdf extension to URL
+                url, _ = cloudinary_url(
+                    public_id,
+                    secure=True,
+                    resource_type=resource_type,
+                    format='pdf'  # This adds .pdf to the URL
+                )
+            elif resource_type == 'raw':
+                # For other raw files
                 url, _ = cloudinary_url(
                     public_id,
                     secure=True,
