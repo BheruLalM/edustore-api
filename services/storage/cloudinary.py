@@ -55,7 +55,7 @@ class CloudinaryStorage(Storage):
         object_key: str,
         expires_in: int = 300,
     ) -> str:
-        """Generate Cloudinary download URL with proper handling for raw files (PDFs)"""
+        """Generate Cloudinary download URL - Fixed Pathing"""
         self._validate_object_key(object_key)
         
         try:
@@ -65,49 +65,27 @@ class CloudinaryStorage(Storage):
             public_id = f"edustore/{object_key}"
             
             # Determine resource_type
-            # Images: use 'image' for img tag rendering
-            # PDFs: use 'raw' for PDF.js (needs actual PDF file bytes)
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
-            pdf_extensions = {'.pdf'}
+            resource_type = 'image' if ext in image_extensions else 'raw'
             
-            if ext in image_extensions:
-                resource_type = 'image'
-            elif ext in pdf_extensions:
-                resource_type = 'raw'  # PDFs as 'raw' for PDF.js
-            else:
-                resource_type = 'raw'
-            
-            # For images, Cloudinary expects ID without extension
-            # For raw files (PDFs, docs), keep the extension
+            # For images, Cloudinary usually expects the ID without extension
+            # For raw files, it requires it.
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
             
             from cloudinary.utils import cloudinary_url
+            url, _ = cloudinary_url(
+                public_id,
+                secure=True,
+                resource_type=resource_type
+            )
             
-            # Generate URL based on resource type
-            if resource_type == 'raw':
-                # For raw files (PDFs), keep extension in URL
-                url, _ = cloudinary_url(
-                    public_id,
-                    secure=True,
-                    resource_type=resource_type,
-                    type='upload'
-                )
-            else:
-                # For images, standard URL generation
-                url, _ = cloudinary_url(
-                    public_id,
-                    secure=True,
-                    resource_type=resource_type
-                )
-            
-            print(f"🔗 Generated {resource_type} URL: {url}")
+            print(f"🔗 Generated URL: {url}")
             return url
             
         except Exception as e:
-            print(f"❌ URL generation failed for {object_key}: {str(e)}")
             raise StorageOperationFailed(f"Failed to generate download URL: {str(e)}") from e
     
     def delete_object(self, *, object_key: str) -> None:
@@ -120,14 +98,7 @@ class CloudinaryStorage(Storage):
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
-            pdf_extensions = {'.pdf'}
-            
-            if ext in image_extensions:
-                resource_type = 'image'
-            elif ext in pdf_extensions:
-                resource_type = 'raw'  # PDFs as 'raw' for PDF.js
-            else:
-                resource_type = 'raw'
+            resource_type = 'image' if ext in image_extensions else 'raw'
             
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
@@ -159,17 +130,11 @@ class CloudinaryStorage(Storage):
             _, ext = os.path.splitext(object_key)
             ext = ext.lower()
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico'}
-            pdf_extensions = {'.pdf'}
+            resource_type = 'image' if ext in image_extensions else 'raw'
             
-            if ext in image_extensions:
-                resource_type = 'image'
-            elif ext in pdf_extensions:
-                resource_type = 'raw'  # PDFs as 'raw' for PDF.js
-            else:
-                resource_type = 'raw'
-            
-            # For images, we strip the extension from public_id
-            # For raw files (PDFs, docs), we MUST keep it
+            # For images, we strip the extension from public_id to allow Cloudinary 
+            # to serve it with different formats (transformations).
+            # For raw, we MUST keep it.
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
                 
