@@ -70,17 +70,20 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # For images (except PDFs), Cloudinary usually expects the ID without extension
-            # For raw files and PDFs in image mode, it requires/prefers it.
-            if resource_type == 'image' and ext != '.pdf':
+            # 🛡️ NORMALIZATION: For 'image' resource_type (incl. PDFs), 
+            # public_id should NOT include the file extension.
+            if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
             
             from cloudinary.utils import cloudinary_url
-            url, _ = cloudinary_url(
-                public_id,
-                secure=True,
-                resource_type=resource_type
-            )
+            
+            # For PDFs specifically, we use the format='pdf' parameter
+            # which correctly appends the extension to the base public_id.
+            url_params = {"secure": True, "resource_type": resource_type}
+            if ext == '.pdf':
+                url_params["format"] = "pdf"
+                
+            url, _ = cloudinary_url(public_id, **url_params)
             
             print(f"🔗 Generated URL: {url}")
             return url
@@ -100,6 +103,7 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
+            # 🛡️ NORMALIZATION: Match the upload public_id logic
             if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
             
@@ -132,10 +136,9 @@ class CloudinaryStorage(Storage):
             image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.ico', '.pdf'}
             resource_type = 'image' if ext in image_extensions else 'raw'
             
-            # For images (except PDFs), we strip the extension from public_id to allow Cloudinary 
-            # to serve it with different formats (transformations).
-            # For raw and PDFs, we MUST keep it.
-            if resource_type == 'image' and ext != '.pdf':
+            # 🛡️ NORMALIZATION: For 'image' resource_type (incl. PDFs),
+            # the public_id should NEVER include the extension.
+            if resource_type == 'image':
                 public_id = public_id.rsplit('.', 1)[0]
                 
             print(f"📤 Uploading: {public_id} (Type: {resource_type})")
