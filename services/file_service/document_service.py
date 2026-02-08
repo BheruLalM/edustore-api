@@ -91,15 +91,28 @@ class DocumentService:
             is_bookmarked = db.query(Bookmark.id).filter(Bookmark.document_id == document_id, Bookmark.user_id == current_user.id).exists()
             is_bookmarked = db.query(is_bookmarked).scalar()
 
-        # 4. Ephemeral Download URL
+        # 4. Ephemeral Download and Preview URLs
         download_url = None
+        preview_url = None
         if doc_static["object_key"]:
             storage = StorageFactory.get_storage()
             try:
+                # Full download URL
                 download_url = storage.generate_download_url(
                     object_key=doc_static["object_key"],
                     expires_in=3600, # 1 hour for detailed view
                 )
+                
+                # Preview URL (first page for PDFs)
+                if doc_static["doc_type"] == "pdf":
+                    preview_url = storage.generate_download_url(
+                        object_key=doc_static["object_key"],
+                        expires_in=3600,
+                        page=1
+                    )
+                else:
+                    preview_url = download_url
+                    
             except Exception:
                 pass # Don't crash details if URL fails
 
@@ -109,6 +122,7 @@ class DocumentService:
         return {
             **doc_static,
             "file_url": download_url,
+            "preview_url": preview_url,
             "is_liked": is_liked,
             "is_bookmarked": is_bookmarked,
             "is_owner": bool(current_user and current_user.id == doc_static["owner_id"]),
